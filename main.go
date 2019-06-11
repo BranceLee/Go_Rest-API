@@ -24,7 +24,7 @@ func main() {
 		port = "8000"
 	}
 
-	fmt.Println(port)
+	fmt.Println("> Server runs on ", port)
 	err := http.ListenAndServe(":" + port, router) //Launch the app
 	if err != nil {
 		fmt.Print(err)
