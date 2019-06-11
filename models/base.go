@@ -20,7 +20,7 @@ func init() {
 	username := os.Getenv("db_user")
 	password := os.Getenv("db_pass")
 	dbName := os.Getenv("db_name")
-	dbHost := os.Getenv("db_test")
+	dbHost := os.Getenv("db_host")
 
 	dbURrl := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s",dbHost, username, dbName, password)
 	fmt.Println(dbURrl)
@@ -34,7 +34,7 @@ func init() {
 
 	// create the table in the databa
 	db.Debug().AutoMigrate(&Account{}) // Database migration
-	defer db.Close()
+	// defer db.Close()
 }
 
 func GetDB() *gorm.DB{

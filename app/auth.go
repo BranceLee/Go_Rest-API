@@ -7,8 +7,8 @@ import (
 	"github.com/Go_Rest_Api/models"
 	jwt "github.com/dgrijalva/jwt-go"
 	"os"
-	"context"
-	"fmt"
+	// "context"
+	// "fmt"
 )
 
 var JwtAuthentication = func(next http.Handler) http.Handler {
@@ -50,5 +50,29 @@ var JwtAuthentication = func(next http.Handler) http.Handler {
 		tokenPart := splitted[1]
 		tk := &models.Token{}
 
+		// 
+		token, err := jwt.ParseWithClaims(tokenPart, tk, func(token *jwt.Token)(interface{},error){
+			return []byte(os.Getenv("token_password")), nil
+		})
+
+		if err != nil {
+			response = u.Message(false, "Token is not valid")
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Add("Content-Type","application/json")
+			u.Respond(w,response)
+			return 
+		}
+
+		if !token.Valid {
+			response = u.Message(false, "Token is not valid.")
+			w.WriteHeader(http.StatusForbidden)
+			w.Header().Add("Content-Type","application/json")
+			u.Respond(w, response)
+			return
+		}
+
+		// IF everything is ok, procceed with the request and set teh caller to the user
+		// retrieved from the parsed token
+		// fmt.Sprint("User", tk.Username)
 	})
 }
