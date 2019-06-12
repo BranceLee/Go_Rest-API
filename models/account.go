@@ -16,9 +16,9 @@ type Token struct {
 
 type Account struct {
 	gorm.Model
-	Email 		string		`json: 	"email"`
-	Password	string		`json: 	"password"`
-	Token		string		`json:	"token"; sql:"-" `
+	Email 		string		`json:"email"`
+	Password	string		`json:"password"`
+	Token		string		`json:"token" sql:"-" `
 }
 
 const (
@@ -26,6 +26,7 @@ const (
 	ERROR_PASSWORD_LENTH="Password is required"
 	ERROR_EMAIL_USED="Email address has been used"
 	ERROR_CONNECTION="Connection error. Please try again"
+	ERROR_DBCONNECTION="Failed to created account, connection error"
 	GET_SUCCESS="Requirement passed"
 )
 
@@ -69,14 +70,18 @@ func (account *Account) Create() (map[string] interface{}){
 
 	GetDB().Create(account)
 
+	if account.ID <= 0 {
+		return u.Message(false, ERROR_DBCONNECTION)
+	}
 
 	// Create new JWT token from the new Registered account, 对account.ID 进行加密
 	tk := &Token{UserId: account.ID}
 
-	// The hashed tk matchs the account.ID
-	token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"),tk)
-	// 字符串签名
-	tokenString, _ := token.SignedString([]byte(os.Getenv("token_password")))
+	tokenString, err :=HashContentWithHS256(tk)
+	if err != nil {
+		return u.Message(false, "Parse Error")
+	}
+
 	account.Token = tokenString
 
 	// 生成返回数据给前端
@@ -84,5 +89,48 @@ func (account *Account) Create() (map[string] interface{}){
 	response := u.Message(true, "Account has been Created")
 	response["account"] = account
 	return response
+}
+
+func Login(email, password string)(map[string]interface{}){
+	account := &Account{}
+	err := GetDB().Table("accounts").Where("email = ?",email).First(account).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound{
+			return u.Message(false, "Email address not found")
+		}
+		return u.Message(false, "Connection Error")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(password))
+
+	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
+		return u.Message(false,"Password and account are not matched")
+	}
+
+	// worked, Right password.
+	account.Password = ""
+
+	// Create the jwt Token
+	tk := &Token{UserId:account.ID}
+	tokenString, err:=HashContentWithHS256(tk)
+	if err != nil {
+		return u.Message(false, "Parse Error")
+	}
+
+
+	account.Token = tokenString
+
+	response := u.Message(true,"Logined In")
+	response["account"]=account
+	return response
+}
+
+func HashContentWithHS256(token *Token) (string, error) {
+	out := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), token)
+	outString, err := out.SignedString([]byte(os.Getenv("token_password")))
+	if err != nil {
+		return "", err
+	}
+	return outString, nil
 }
 
