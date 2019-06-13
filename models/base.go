@@ -33,7 +33,7 @@ func init() {
 	db = conn
 
 	// create the table in the databa
-	db.Debug().AutoMigrate(&Account{}) // Database migration
+	db.Debug().AutoMigrate(&Account{},&Contact{}) // Database migration
 	// defer db.Close()
 }
 

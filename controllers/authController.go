@@ -33,6 +33,3 @@ func Authenticate(w http.ResponseWriter, r*http.Request){
 	u.Respond(w, resp)
 }
 
-func CreateContact(){
-
-}
