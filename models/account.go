@@ -1,12 +1,12 @@
 package models
 
 import (
+	u "github.com/Go_Rest_Api/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
-	"strings"
-	u "github.com/Go_Rest_Api/utils"
 	"golang.org/x/crypto/bcrypt"
 	"os"
+	"strings"
 )
 
 type Token struct {
@@ -16,18 +16,18 @@ type Token struct {
 
 type Account struct {
 	gorm.Model
-	Email 		string		`json:"email"`
-	Password	string		`json:"password"`
-	Token		string		`json:"token" sql:"-" `
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Token    string `json:"token" sql:"-" `
 }
 
 const (
-	ERROR_EMAIL = "Email address is inlegal"
-	ERROR_PASSWORD_LENTH="Password is required"
-	ERROR_EMAIL_USED="Email address has been used"
-	ERROR_CONNECTION="Connection error. Please try again"
-	ERROR_DBCONNECTION="Failed to created account, connection error"
-	GET_SUCCESS="Requirement passed"
+	ERROR_EMAIL          = "Email address is inlegal"
+	ERROR_PASSWORD_LENTH = "Password is required"
+	ERROR_EMAIL_USED     = "Email address has been used"
+	ERROR_CONNECTION     = "Connection error. Please try again"
+	ERROR_DBCONNECTION   = "Failed to created account, connection error"
+	GET_SUCCESS          = "Requirement passed"
 )
 
 // Validate incoming user details...
@@ -43,7 +43,7 @@ func (account Account) Validate() (map[string]interface{}, bool) {
 
 	// Email must be unique
 	temp := &Account{}
-	
+
 	// 数据类型合法时，查询数据表,GetDB return the configed db
 	err := GetDB().Table("accounts").Where("email = ?", account.Email).First(temp).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -57,8 +57,8 @@ func (account Account) Validate() (map[string]interface{}, bool) {
 	return u.Message(false, GET_SUCCESS), true
 }
 
-// Type Account can create User 
-func (account *Account) Create() (map[string] interface{}){
+// Type Account can create User
+func (account *Account) Create() map[string]interface{} {
 
 	if res, ok := account.Validate(); !ok {
 		return res
@@ -77,7 +77,7 @@ func (account *Account) Create() (map[string] interface{}){
 	// Create new JWT token from the new Registered account, 对account.ID 进行加密
 	tk := &Token{UserId: account.ID}
 
-	tokenString, err :=HashContentWithHS256(tk)
+	tokenString, err := HashContentWithHS256(tk)
 	if err != nil {
 		return u.Message(false, "Parse Error")
 	}
@@ -91,11 +91,11 @@ func (account *Account) Create() (map[string] interface{}){
 	return response
 }
 
-func Login(email, password string)(map[string]interface{}){
+func Login(email, password string) map[string]interface{} {
 	account := &Account{}
-	err := GetDB().Table("accounts").Where("email = ?",email).First(account).Error
+	err := GetDB().Table("accounts").Where("email = ?", email).First(account).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound{
+		if err == gorm.ErrRecordNotFound {
 			return u.Message(false, "Email address not found")
 		}
 		return u.Message(false, "Connection Error")
@@ -104,24 +104,23 @@ func Login(email, password string)(map[string]interface{}){
 	err = bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(password))
 
 	if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-		return u.Message(false,"Password and account are not matched")
+		return u.Message(false, "Password and account are not matched")
 	}
 
 	// worked, Right password.
 	account.Password = ""
 
 	// Create the jwt Token
-	tk := &Token{UserId:account.ID}
-	tokenString, err:=HashContentWithHS256(tk)
+	tk := &Token{UserId: account.ID}
+	tokenString, err := HashContentWithHS256(tk)
 	if err != nil {
 		return u.Message(false, "Parse Error")
 	}
 
-
 	account.Token = tokenString
 
-	response := u.Message(true,"Logined In")
-	response["account"]=account
+	response := u.Message(true, "Logined In")
+	response["account"] = account
 	return response
 }
 
@@ -133,4 +132,3 @@ func HashContentWithHS256(token *Token) (string, error) {
 	}
 	return outString, nil
 }
-
